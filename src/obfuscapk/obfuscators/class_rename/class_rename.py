@@ -246,29 +246,49 @@ class ClassRename(obfuscator_category.IRenameObfuscator):
             with open(xml_file, "r", encoding="utf-8") as current_file:
                 file_content = current_file.read()
 
-            # Replace strings from longest to shortest (to avoid replacing
-            # partial strings).
-            for old_name in sorted(dot_rename_transformations, reverse=True, key=len):
-                file_content = file_content.replace(
-                    old_name, dot_rename_transformations[old_name]
-                )
+            xml_parser = Xml.XMLParser(encoding="utf-8")
+            xml_tree = Xml.parse(xml_file, parser=xml_parser)
+            for element in xml_tree.iter():
+                if element.tag in dot_rename_transformations:
+                    element.tag = dot_rename_transformations[element.tag]
+                if '%s.%s' % (self.package_name, element.tag) in dot_rename_transformations:
+                    element.tag = dot_rename_transformations['%s.%s' % (self.package_name, element.tag)].replace(self.encrypted_package_name, '')
+                new_attrib = {}
+                for k, v in element.attrib.items():
+                    if v in dot_rename_transformations:
+                        new_attrib[k] = dot_rename_transformations[v]
+                    elif '%s.%s' % (self.package_name, v) in dot_rename_transformations:
+                        new_attrib['%s.%s' % (self.package_name, element.tag)] = dot_rename_transformations['%s.%s' % (self.package_name, element.tag)].replace(
+                            self.encrypted_package_name, '')
+                    else:
+                        new_attrib[k] = v
+                for k, v in new_attrib.items():
+                    element.set(k, v)
 
-                # Activity without package name (".ActivityName")
-                if (
-                    '"{0}"'.format(old_name.replace(self.package_name, ""))
-                    in file_content
-                ):
-                    file_content = file_content.replace(
-                        '"{0}"'.format(old_name.replace(self.package_name, "")),
-                        '"{0}"'.format(
-                            dot_rename_transformations[old_name].replace(
-                                self.encrypted_package_name, ""
-                            )
-                        ),
-                    )
+            # # Replace strings from longest to shortest (to avoid replacing
+            # # partial strings).
+            # for old_name in sorted(dot_rename_transformations, reverse=True, key=len):
+            #     file_content = file_content.replace(
+            #         old_name, dot_rename_transformations[old_name]
+            #     )
+            #
+            #     # Activity without package name (".ActivityName")
+            #     if (
+            #         '"{0}"'.format(old_name.replace(self.package_name, ""))
+            #         in file_content
+            #     ):
+            #         file_content = file_content.replace(
+            #             '"{0}"'.format(old_name.replace(self.package_name, "")),
+            #             '"{0}"'.format(
+            #                 dot_rename_transformations[old_name].replace(
+            #                     self.encrypted_package_name, ""
+            #                 )
+            #             ),
+            #         )
 
-            with open(xml_file, "w", encoding="utf-8") as current_file:
-                current_file.write(file_content)
+            with open(xml_file, "wb") as current_file:
+                xml_tree.write(current_file, encoding='utf-8')
+                # current_file.write(file_content)
 
     def obfuscate(self, obfuscation_info: Obfuscation):
         self.logger.info('Running "{0}" obfuscator'.format(self.__class__.__name__))
