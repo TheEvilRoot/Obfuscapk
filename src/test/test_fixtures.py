@@ -33,6 +33,22 @@ def tmp_demo_apk_v10_original_path(tmp_path) -> str:
     destination = shutil.copy2(source, destination)
     return str(destination)
 
+@pytest.fixture(scope="function")
+def tmp_demo_aab_v10_original_path(tmp_path) -> str:
+    """
+    Return a path to a valid demo aab file generated with Android Studio (different
+    path for each test, but the aab file is the same).
+    """
+    source = (
+        Path(__file__)
+        .resolve()
+        .parent.joinpath(
+            "test_resources", "v1.0", "com.example.quiteawesomeapp-original.aab"
+        )
+    )
+    destination = tmp_path.joinpath("com.example.quiteawesomeapp-original.aab")
+    destination = shutil.copy2(source, destination)
+    return str(destination)
 
 @pytest.fixture(scope="function")
 def tmp_demo_apk_v10_rebuild_path(tmp_path) -> str:

@@ -25,7 +25,9 @@ class BundleDecompiler(object):
         else:
             self.bundledecompiler_path: str = "BundleDecompiler.jar"
 
-        full_bundledecompiler_path = shutil.which(self.bundledecompiler_path)
+        # no need for X_OK for BundleDecompiler.jar
+        # because it not being executed by system, but by java
+        full_bundledecompiler_path = shutil.which(self.bundledecompiler_path, mode=os.F_OK)
 
         # Make sure bundle decompiler is available
         if not os.path.isfile(full_bundledecompiler_path):
@@ -224,7 +226,7 @@ class AABSigner(object):
         else:
             self.aabsigner_path: str = "BundleDecompiler.jar"
 
-        full_aabsigner_path = shutil.which(self.aabsigner_path)
+        full_aabsigner_path = shutil.which(self.aabsigner_path, mode=os.F_OK)
 
         # Make sure to use the full path of the executable (needed for cross-platform
         # compatibility).

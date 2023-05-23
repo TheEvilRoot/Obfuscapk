@@ -13,6 +13,7 @@ from test.test_fixtures import (
     tmp_working_directory_path,
     tmp_demo_apk_v10_original_path,
     tmp_demo_apk_v10_rebuild_path,
+    tmp_demo_aab_v10_original_path
 )
 
 
@@ -58,6 +59,44 @@ class TestObfuscation(object):
             ignore_libs=True,
         )
         assert os.path.isfile(obfuscated_apk_path)
+
+    def test_perform_full_obfuscation_valid_aab(
+        self,
+        tmp_working_directory_path: str,
+        tmp_demo_aab_v10_original_path: str,
+    ):
+        obfuscated_aab_path = os.path.join(tmp_working_directory_path, "obfuscated.aab")
+        perform_obfuscation(
+            tmp_demo_aab_v10_original_path,
+            [
+                "DebugRemoval",
+                "LibEncryption",
+                "CallIndirection",
+                "MethodRename",
+                "AssetEncryption",
+                "MethodOverload",
+                "ConstStringEncryption",
+                "ResStringEncryption",
+                "ArithmeticBranch",
+                "FieldRename",
+                "Nop",
+                "Goto",
+                "ClassRename",
+                "Reflection",
+                "AdvancedReflection",
+                "Reorder",
+                "RandomManifest",
+                "Rebuild",
+                "NewAlignment",
+                "NewSignature",
+            ],
+            tmp_working_directory_path,
+            obfuscated_aab_path,
+            interactive=True,
+            ignore_libs=True,
+            use_aapt2=True
+        )
+        assert os.path.isfile(obfuscated_aab_path)
 
     def test_perform_obfuscation_error_missing_external_tool(self, monkeypatch):
         monkeypatch.setenv("APKTOOL_PATH", "invalid.apktool.path")
