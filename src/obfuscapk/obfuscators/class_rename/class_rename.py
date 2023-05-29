@@ -52,9 +52,10 @@ class ClassRename(obfuscator_category.IRenameObfuscator):
         return dot_rename_transformations
 
     def transform_package_name(self, manifest_xml_root: Element):
-        self.encrypted_package_name = ".".join(
-            [self.encrypt_identifier(token) for token in self.package_name.split(".")]
-        )
+        self.encrypted_package_name = self.package_name
+        # self.encrypted_package_name = ".".join(
+        #     [self.encrypt_identifier(token) for token in self.package_name.split(".")]
+        # )
 
         # Rename package name in manifest file.
         manifest_xml_root.set("package", self.encrypted_package_name)
@@ -193,12 +194,13 @@ class ClassRename(obfuscator_category.IRenameObfuscator):
                         and string_match.group("string_value")
                         in dot_rename_transformations
                     ):
-                        line = line.replace(
-                            string_match.group("string_value"),
-                            dot_rename_transformations[
-                                string_match.group("string_value")
-                            ],
-                        )
+                        pass
+                        # line = line.replace(
+                        #     string_match.group("string_value"),
+                        #     dot_rename_transformations[
+                        #         string_match.group("string_value")
+                        #     ],
+                        # )
 
                     # Sometimes classes are used in annotations as strings
                     # without trailing ;
