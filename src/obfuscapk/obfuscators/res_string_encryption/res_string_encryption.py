@@ -25,7 +25,9 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
 
         self.encryption_secret = "This-key-need-to-be-32-character"
 
-    def encrypt_string(self, string_to_encrypt: str) -> str:
+    def encrypt_string(self, string_name: str, string_to_encrypt: str) -> str:
+        if string_name in ['app_name']:
+            return string_to_encrypt
         # This is needed to remove the escaping added by Python. For example, if we
         # find in string resources the string "\"message\"" Android will treat it as
         # "message" while in Python it's \"message\", so we need to encrypt "message"
@@ -59,8 +61,10 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
             string_name = xml_string.get("name", None)
             string_value = xml_string.text
             if string_name and string_value and string_name in string_names_to_encrypt:
-                encrypted_string_value = self.encrypt_string(string_value)
+                encrypted_string_value = self.encrypt_string(string_name, string_value)
                 xml_string.text = encrypted_string_value
+                if string_name == 'platform':
+                    self.logger.warn('PLATFORM has been written to %s as %s', string_resources_xml_file, encrypted_string_value)
 
         xml_tree.write(string_resources_xml_file, encoding="utf-8")
 
@@ -78,7 +82,7 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
             if string_array_name and string_array_name in string_array_names_to_encrypt:
                 for item in xml_string_array.iter("item"):
                     if item.text:
-                        encrypted_string_value = self.encrypt_string(item.text)
+                        encrypted_string_value = self.encrypt_string(string_array_name, item.text)
                         item.text = encrypted_string_value
 
         xml_tree.write(string_array_resources_xml_file, encoding="utf-8")
@@ -106,7 +110,8 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
                 r"\s+invoke-virtual\s"
                 r"{[vp0-9]+,\s(?P<param_register>[vp0-9]+)},\s"
                 r"(Landroid/content/res/Resources;->getString\(I\)Ljava/lang/String;"
-                r"|Landroid/content/Context;->getString\(I\)Ljava/lang/String;)"
+                r"|Landroid/content/Context;->getString\(I\)Ljava/lang/String;"
+                r"|Landroid/app/Activity;->getString\(I\)Ljava/lang/String;)"
             )
 
             load_string_array_res_pattern = re.compile(
@@ -138,6 +143,7 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
                             field_match = string_res_field_pattern.match(line)
                             if field_match:
                                 # String name and id declaration.
+                                self.logger.warn('res_string %s', field_match.group("string_name"))
                                 string_id_to_string_name[
                                     field_match.group("string_id")
                                 ] = field_match.group("string_name")
@@ -228,6 +234,8 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
                             # encrypted. We set the corresponding string_index to -1
                             # and we won't insert any decryption code for this string.
                             string_index[string_number] = -1
+                            if 'pdb3a4a28' in smali_file:
+                                self.logger.warn('PLATFORM METHOD DECL REACHED in %s', smali_file)
                             break
 
                         # NOTE: if a string is loaded from resources, it will be
@@ -248,7 +256,6 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
                                 encrypted_res_strings.add(
                                     string_id_to_string_name[id_match.group("id")]
                                 )
-
                             # Proceed with the next asset file (if any).
                             break
 

@@ -36,7 +36,12 @@ class ClassRename(obfuscator_category.IRenameObfuscator):
 
     def encrypt_identifier(self, identifier: str) -> str:
         identifier_md5 = util.get_string_md5(identifier)
-        return "p{0}".format(identifier_md5.lower()[:8])
+        ret = "p{0}".format(identifier_md5.lower()[:8])
+        if len(identifier) < 3: # do not obfuscate short names (1 or 2 chars), they are probably been already obfuscated by Proguard
+            self.logger.warn('encrypt skip key=%s', identifier)
+            return identifier
+        self.logger.warn('encrypt key=%s value=%s', identifier, ret)
+        return ret
 
     def slash_to_dot_notation_for_classes(
         self, rename_transformations: Dict[str, str]
@@ -122,6 +127,7 @@ class ClassRename(obfuscator_category.IRenameObfuscator):
                                     )
                                 separator_index += 1
 
+                            self.logger.info('encrypt class name key=%s value+%s', class_name, encrypted_class_name)
                             out_file.write(
                                 line.replace(class_name, encrypted_class_name)
                             )
@@ -245,28 +251,37 @@ class ClassRename(obfuscator_category.IRenameObfuscator):
             interactive=interactive,
             description="Renaming class usages in xml files",
         ):
-            xml_parser = Xml.XMLParser(encoding="utf-8")
-            xml_tree = Xml.parse(xml_file, parser=xml_parser)
-            for element in xml_tree.iter():
-                # search for XML tag names to replace
-                if element.tag in dot_rename_transformations:
-                    element.tag = dot_rename_transformations[element.tag]
-                tag_with_package = '%s.%s' % (self.package_name, element.tag)
-                if tag_with_package in dot_rename_transformations:
-                    element.tag = dot_rename_transformations[tag_with_package].replace(self.encrypted_package_name, '')
-                new_attrib = {}
-                # search for replacements only in attribute values, keys does not changes
-                for k, v in element.attrib.items():
-                    value_with_package = '%s.%s' % (self.package_name, v)
-                    if v in dot_rename_transformations:
-                        new_attrib[k] = dot_rename_transformations[v]
-                    elif value_with_package in dot_rename_transformations:
-                        new_attrib[value_with_package] = dot_rename_transformations[value_with_package]\
-                            .replace(self.encrypted_package_name, '')
-                    else:
-                        new_attrib[k] = v
-                for k, v in new_attrib.items():
-                    element.set(k, v)
+            try:
+                xml_parser = Xml.XMLParser(encoding="utf-8")
+                xml_tree = Xml.parse(xml_file, parser=xml_parser)
+                for element in xml_tree.iter():
+                    # search for XML tag names to replace
+                    if element.tag in dot_rename_transformations:
+                        new_tag = dot_rename_transformations[element.tag]
+                        self.logger.warn("XML_REPLACE tag %s => %s", element.tag, new_tag)
+                        element.tag = new_tag
+                    tag_with_package = '%s.%s' % (self.package_name, element.tag)
+                    if tag_with_package in dot_rename_transformations:
+                        new_tag = dot_rename_transformations[tag_with_package].replace(self.encrypted_package_name, '')
+                        self.logger.warn("XML_REPLACE tag %s => %s", element.tag, new_tag)
+                        element.tag = new_tag
+                    new_attrib = {}
+                    # search for replacements only in attribute values, keys does not changes
+                    for k, v in element.attrib.items():
+                        value_with_package = '%s.%s' % (self.package_name, v)
+                        if v in dot_rename_transformations:
+                            new_attrib[k] = dot_rename_transformations[v]
+                            self.logger.warn("XML_REPLACE attribute %s %s = %s => %s", element.tag, k, element.attrib[k], new_attrib[k])
+                        elif value_with_package in dot_rename_transformations:
+                            new_attrib[k] = dot_rename_transformations[value_with_package]\
+                                .replace(self.encrypted_package_name, '')
+                            self.logger.warn("XML_REPLACE attribute %s %s = %s => %s", element.tag, k, element.attrib[k], new_attrib[k])
+                        else:
+                            new_attrib[k] = v
+                    for k, v in new_attrib.items():
+                        element.set(k, v)
+            except Exception as e:
+                raise Exception('Failed to process file %s' % xml_file, e)
             with open(xml_file, "wb") as current_file:
                 xml_tree.write(current_file, encoding='utf-8')
 

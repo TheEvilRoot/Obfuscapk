@@ -28,6 +28,7 @@ class LibEncryption(obfuscator_category.IEncryptionObfuscator):
         self.encryption_secret = obfuscation_info.encryption_secret
         try:
             native_libs = obfuscation_info.get_native_lib_files()
+            self.logger.warn('native_libs = [%s]', ','.join(native_libs))
 
             native_lib_invoke_pattern = re.compile(
                 r"\s+invoke-static\s{(?P<invoke_pass>[vp0-9]+)},\s"
@@ -37,6 +38,7 @@ class LibEncryption(obfuscator_category.IEncryptionObfuscator):
             encrypted_to_original_mapping: Dict[str, str] = {}
 
             if native_libs:
+                lib_names: List[str] = []
                 for smali_file in util.show_list_progress(
                     obfuscation_info.get_smali_files(),
                     interactive=obfuscation_info.interactive,
@@ -55,7 +57,6 @@ class LibEncryption(obfuscator_category.IEncryptionObfuscator):
                     local_count = 16
 
                     # Names of the loaded libraries.
-                    lib_names: List[str] = []
 
                     editing_constructor = False
                     start_index = 0
@@ -133,40 +134,43 @@ class LibEncryption(obfuscator_category.IEncryptionObfuscator):
                                     )
                                 )
 
-                        # Encrypt the native libraries used in code and put them
-                        # in assets folder.
-                        assets_dir = obfuscation_info.get_assets_directory()
-                        os.makedirs(assets_dir, exist_ok=True)
-                        for native_lib in native_libs:
-                            for lib_name in lib_names:
-                                if native_lib.endswith("{0}.so".format(lib_name)):
-                                    arch = os.path.basename(os.path.dirname(native_lib))
-                                    encrypted_lib_path = os.path.join(
-                                        assets_dir,
-                                        "lib.{arch}.{lib_name}.so".format(
-                                            arch=arch, lib_name=lib_name
-                                        ),
-                                    )
-
-                                    with open(native_lib, "rb") as native_lib_file:
-                                        encrypted_lib = AES.new(
-                                            key=self.encryption_secret.encode(),
-                                            mode=AES.MODE_ECB,
-                                        ).encrypt(
-                                            pad(native_lib_file.read(), AES.block_size)
-                                        )
-
-                                    with open(
-                                        encrypted_lib_path, "wb"
-                                    ) as encrypted_lib_file:
-                                        encrypted_lib_file.write(encrypted_lib)
-
-                                    encrypted_to_original_mapping[
-                                        encrypted_lib_path
-                                    ] = native_lib
-
                     with open(smali_file, "w", encoding="utf-8") as current_file:
                         current_file.writelines(lines)
+
+                # Encrypt ``the native libraries used in code and put them
+                # in assets folder.
+                assets_dir = obfuscation_info.get_assets_directory()
+                os.makedirs(assets_dir, exist_ok=True)
+                self.logger.warn('native_lib write %s', ','.join(native_libs))
+                for native_lib in native_libs:
+                    for lib_name in lib_names:
+                        self.logger.warn('native_lib libname %s => %s %s', lib_name, native_lib, native_lib.endswith("{0}.so".format(lib_name)))
+                        if native_lib.endswith("{0}.so".format(lib_name)):
+                            arch = os.path.basename(os.path.dirname(native_lib))
+                            encrypted_lib_path = os.path.join(
+                                assets_dir,
+                                "lib.{arch}.{lib_name}.so".format(
+                                    arch=arch, lib_name=lib_name
+                                ),
+                            )
+
+                            with open(native_lib, "rb") as native_lib_file:
+                                encrypted_lib = AES.new(
+                                    key=self.encryption_secret.encode(),
+                                    mode=AES.MODE_ECB,
+                                ).encrypt(
+                                    pad(native_lib_file.read(), AES.block_size)
+                                )
+
+                            with open(
+                                encrypted_lib_path, "wb"
+                            ) as encrypted_lib_file:
+                                encrypted_lib_file.write(encrypted_lib)
+                            self.logger.warn('native_lib replace %s %s', encrypted_lib_path, native_lib)
+
+                            encrypted_to_original_mapping[
+                                encrypted_lib_path
+                            ] = native_lib
 
                 if (
                     not obfuscation_info.decrypt_asset_smali_file_added_flag

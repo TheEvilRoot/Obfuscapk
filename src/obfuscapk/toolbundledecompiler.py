@@ -103,8 +103,6 @@ class BundleDecompiler(object):
             )
 
         decode_cmd: List[str] = [
-            "java",
-            "-jar",
             self.bundledecompiler_path,
             "d",
             "--in=" + aab_path,
@@ -167,8 +165,6 @@ class BundleDecompiler(object):
             )
 
         build_cmd: List[str] = [
-            "java",
-            "-jar",
             self.bundledecompiler_path,
             "b",
             "--in=" + source_dir_path,
@@ -252,8 +248,6 @@ class AABSigner(object):
             raise FileNotFoundError('Unable to find file "{0}"'.format(aab_path))
 
         sign_cmd: List[str] = [
-            "java",
-            "-jar",
             self.aabsigner_path,
             "sign-bundle",
             "--in=" + aab_path,

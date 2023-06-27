@@ -461,7 +461,7 @@ class Obfuscation(object):
                 self._native_lib_files = [
                     os.path.join(root, file_name)
                     for root, dir_names, file_names in os.walk(
-                        os.path.join(self._decoded_apk_path, "lib")
+                        os.path.join(self._decoded_apk_path, "base", "lib")
                     )
                     for file_name in file_names
                     if file_name.endswith(".so")
