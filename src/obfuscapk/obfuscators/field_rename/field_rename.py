@@ -73,7 +73,7 @@ class FieldRename(obfuscator_category.IRenameObfuscator):
                     if field_match:
                         field_name = field_match.group("field_name")
                         # Avoid sub-fields and user defined packages.
-                        if not ignore and "$" not in field_name:
+                        if not ignore and "$" not in field_name and field_name != 'CREATOR':
                             # Rename field declaration (usages of this field will be
                             # renamed later) and add some random fields.
                             line = line.replace(
@@ -94,7 +94,8 @@ class FieldRename(obfuscator_category.IRenameObfuscator):
                                     )
                                     self.added_fields += 1
 
-                            field = "{field_name}:{field_type}".format(
+                            field = "{class_name}:{field_name}:{field_type}".format(
+                                class_name=class_name,
                                 field_name=field_match.group("field_name"),
                                 field_type=field_match.group("field_type"),
                             )
@@ -123,16 +124,17 @@ class FieldRename(obfuscator_category.IRenameObfuscator):
                     # Field usage.
                     field_usage_match = util.field_usage_pattern.match(line)
                     if field_usage_match:
-                        field = "{field_name}:{field_type}".format(
+                        class_name = field_usage_match.group("field_object")
+                        field = "{class_name}:{field_name}:{field_type}".format(
+                            class_name=class_name,
                             field_name=field_usage_match.group("field_name"),
                             field_type=field_usage_match.group("field_type"),
                         )
-                        class_name = field_usage_match.group("field_object")
                         field_name = field_usage_match.group("field_name")
                         if field in fields_to_rename and (
                             not class_name.startswith(("Landroid", "Ljava"))
                             or class_name in sdk_classes
-                        ):
+                        ) and (field_usage_match.group("field_name") != 'CREATOR'):
                             # Rename field usage.
                             out_file.write(
                                 line.replace(
