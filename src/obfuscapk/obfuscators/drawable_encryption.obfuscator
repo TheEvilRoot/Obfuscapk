@@ -1,0 +1,7 @@
+[Core]
+Name = DrawableEncryption
+Module = drawable_encryption
+
+[Documentation]
+Description = Encrypt drawables in resources (only those called inside code)
+Version = 1.0

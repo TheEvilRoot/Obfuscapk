@@ -23,7 +23,7 @@ logging.getLogger("yapsy").level = logging.ERROR
 # Logging configuration.
 logger = logging.getLogger(__name__)
 logging.basicConfig(
-    format="%(asctime)s> [%(levelname)s][%(name)s][%(funcName)s()] %(message)s",
+    format="%(asctime)s> [%(levelname)s] %(message)s",
     datefmt="%d/%m/%Y %H:%M:%S",
     level=log_level,
     filename='/tmp/bd.txt'

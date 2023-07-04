@@ -281,6 +281,14 @@ def get_decrypt_string_smali_code(encryption_secret: str) -> str:
     )
     return replace_default_secret_key(text, encryption_secret)
 
+def get_decrypt_drawable_smali_code(encryption_secret: str) -> str:
+    text = get_text_from_file(
+        os.path.join(
+            os.path.dirname(__file__), "resources", "smali", "pi", "EncAssetFileDescriptor.smali"
+        )
+    )
+    return replace_default_secret_key(text, encryption_secret)
+
 
 def replace_default_secret_key(text: str, encryption_secret: str) -> str:
     return text.replace("This-key-need-to-be-32-character", encryption_secret)
