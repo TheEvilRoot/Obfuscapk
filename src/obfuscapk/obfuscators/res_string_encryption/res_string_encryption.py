@@ -33,10 +33,7 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
         # "message" while in Python it's \"message\", so we need to encrypt "message"
         # and not \"message\" (we have to remove the unnecessary escaping, otherwise
         # the backslashes would by encrypted as part of the string).
-        string_to_encrypt = string_to_encrypt.encode(errors="replace").decode(
-            "unicode_escape"
-        )
-
+        string_to_encrypt = string_to_encrypt.replace("\\'", "'").replace('\\"', '"')
         key = PBKDF2(
             password=self.encryption_secret,
             salt=self.encryption_secret.encode(),
@@ -45,7 +42,7 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
         )
         encrypted_string = hexlify(
             AES.new(key=key, mode=AES.MODE_ECB).encrypt(
-                pad(string_to_encrypt.encode(errors="replace"), AES.block_size)
+                pad(string_to_encrypt.encode(), AES.block_size)
             )
         ).decode()
         return encrypted_string
@@ -301,44 +298,17 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
                 for string_number, index in enumerate(
                     i for i in string_index if i != -1
                 ):
-                    # For each resource string loaded, look for the next
-                    # move-result-object instruction to see in which register the string
-                    # is saved, in order to add a new instruction to decrypt it.
-                    for line_number in range(index + 1, len(lines)):
-                        if lines[line_number].startswith(".end method"):
-                            # Method end reached, no move-result-object instruction
-                            # found for this string resource (the loaded string is not
-                            # used), so proceed with the next (if any).
-                            break
-
-                        # If the string resource is put into a register v0-v15 we can
-                        # proceed with the encryption, but if it uses a p<number>
-                        # register, before encrypting we have to check if
-                        # <number> + locals <= 15.
-                        move_result_match = move_result_obj_pattern.match(
-                            lines[line_number]
-                        )
-                        if move_result_match:
-                            reg_type = move_result_match.group("register")[:1]
-                            reg_number = int(move_result_match.group("register")[1:])
-                            if (reg_type == "v" and reg_number <= 15) or (
-                                reg_type == "p"
-                                and reg_number + string_local_count[string_number] <= 15
-                            ):
-                                # Add string decrypt instruction.
-                                lines[line_number] += (
-                                    "\n\tinvoke-static {{{register}}}, "
-                                    "Lcom/decryptstringmanager/DecryptString;->"
-                                    "decryptString(Ljava/lang/String;)"
-                                    "Ljava/lang/String;\n\n".format(
-                                        register=move_result_match.group("register")
-                                    )
-                                    + lines[line_number]
-                                )
-
-                            # Proceed with the next string resource (if any).
-                            break
-
+                    lsrp = load_string_res_pattern.match(lines[index])
+                    self.logger.warn('HEREE %s', lsrp.groups())
+                    callee = lsrp.groups()[1]
+                    if callee == 'Landroid/content/Context;->getString(I)Ljava/lang/String;':
+                        func = ('Landroid/content/Context;', 'decryptStringContext')
+                    elif callee == 'Landroid/app/Activity;->getString(I)Ljava/lang/String;':
+                        func = ('Landroid/app/Activity;', 'decryptStringActivity')
+                    else:
+                        func = ('Landroid/content/res/Resources;', 'decryptStringResources')
+                    lines[index] = lines[index].replace('invoke-virtual', 'invoke-static').replace(callee, 'Lpi/DecryptString;->%s(%sI)Ljava/lang/String;' % (func[1], func[0]))
+                    
                 # After each string array resource is loaded, decrypt it (the string
                 # array resource will be encrypted directly in the xml file).
                 for string_array_number, index in enumerate(
@@ -383,23 +353,41 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
 
                             # Proceed with the next string array resource (if any).
                             break
+                        else:
+                            reg_type = move_result_match.group("register")[:1]
+                            reg_number = int(move_result_match.group("register")[1:])
+                            lines[line_number] += (
+                                    "\n\tinvoke-static {{{register}}}, "
+                                    "Lcom/decryptstringmanager/DecryptString;->"
+                                    "decryptStringArray([Ljava/lang/String;)"
+                                    "[Ljava/lang/String;\n\n".format(
+                                        register=move_result_match.group("register")
+                                    )
+                                    + lines[line_number]
+                                )
+
+
 
                 with open(smali_file, "w", encoding="utf-8") as current_file:
                     current_file.writelines(lines)
 
             # Encrypt the strings and the string arrays in the resource files.
-            strings_xml_path = os.path.join(
-                obfuscation_info.get_resource_directory(), "values", "strings.xml"
-            )
-            string_arrays_xml_path = os.path.join(
-                obfuscation_info.get_resource_directory(), "values", "arrays.xml"
-            )
-            if os.path.isfile(strings_xml_path):
-                self.encrypt_string_resources(strings_xml_path, encrypted_res_strings)
-            if os.path.isfile(string_arrays_xml_path):
-                self.encrypt_string_array_resources(
-                    string_arrays_xml_path, encrypted_res_string_arrays
-                )
+
+            strings_xml_paths = []
+            string_arrays_xml_paths = []
+            for filename in os.listdir(obfuscation_info.get_resource_directory()):
+                if filename.startswith('values'):
+                    filepath = os.path.join(obfuscation_info.get_resource_directory(), filename)
+                    strings_xml_paths.append(os.path.join(filepath, "strings.xml"))
+                    string_arrays_xml_paths.append(os.path.join(filepath, "arrays.xml"))
+            for strings_xml_path in strings_xml_paths:
+                if os.path.isfile(strings_xml_path):
+                    self.encrypt_string_resources(strings_xml_path, encrypted_res_strings)
+            for string_arrays_xml_path in string_arrays_xml_paths:
+                if os.path.isfile(string_arrays_xml_path):
+                    self.encrypt_string_array_resources(
+                        string_arrays_xml_path, encrypted_res_string_arrays
+                    )
 
             if not obfuscation_info.decrypt_string_smali_file_added_flag and (
                 encrypted_res_strings or encrypted_res_string_arrays

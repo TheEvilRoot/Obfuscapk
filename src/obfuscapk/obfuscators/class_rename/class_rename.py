@@ -336,7 +336,7 @@ class ClassRename(obfuscator_category.IRenameObfuscator):
                 for file_name in file_names
                 if file_name.endswith(".xml")
                 and (
-                    "layout" in root or "xml" in root
+                    "layout" in root or "xml" in root or "navigation" in root
                 )  # Only res/layout-*/ and res/xml-*/ folders.
             )
             xml_files.add(obfuscation_info.get_manifest_file())

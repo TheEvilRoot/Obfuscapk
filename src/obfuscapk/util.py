@@ -276,7 +276,7 @@ def get_decrypt_asset_smali_code(encryption_secret: str) -> str:
 def get_decrypt_string_smali_code(encryption_secret: str) -> str:
     text = get_text_from_file(
         os.path.join(
-            os.path.dirname(__file__), "resources", "smali", "DecryptString.smali"
+            os.path.dirname(__file__), "resources", "smali", "pi", "DecryptString.smali"
         )
     )
     return replace_default_secret_key(text, encryption_secret)
@@ -287,8 +287,8 @@ def get_decrypt_drawable_smali_code(encryption_secret: str) -> str:
             os.path.dirname(__file__), "resources", "smali", "pi", "EncAssetFileDescriptor.smali"
         )
     )
-    return replace_default_secret_key(text, encryption_secret)
-
+    h = get_string_md5(encryption_secret)[4:12]
+    return replace_default_secret_key(text, encryption_secret).replace('This-is-build-hash-for-assets', h)
 
 def replace_default_secret_key(text: str, encryption_secret: str) -> str:
     return text.replace("This-key-need-to-be-32-character", encryption_secret)

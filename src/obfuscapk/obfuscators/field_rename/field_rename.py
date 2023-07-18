@@ -24,7 +24,9 @@ class FieldRename(obfuscator_category.IRenameObfuscator):
 
     def rename_field(self, field_name: str) -> str:
         field_md5 = util.get_string_md5(field_name)
-        return "f{0}".format(field_md5.lower()[:8])
+        rrr =  "f{0}".format(field_md5.lower()[:8])
+        self.logger.warn('RENAME_FIELD %s => %s', field_name, rrr)
+        return rrr
 
     def get_sdk_class_names(self, smali_files: List[str]) -> Set[str]:
         class_names: Set[str] = set()
