@@ -15,6 +15,7 @@ from obfuscapk import obfuscator_category
 from obfuscapk import util
 from obfuscapk.obfuscation import Obfuscation
 
+import functools
 
 class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
     def __init__(self):
@@ -25,6 +26,7 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
 
         self.encryption_secret = "This-key-need-to-be-32-character"
 
+    @functools.lru_cache(maxsize=4096)
     def encrypt_string(self, string_name: str, string_to_encrypt: str) -> str:
         if string_name in ['app_name']:
             return string_to_encrypt
@@ -308,7 +310,7 @@ class ResStringEncryption(obfuscator_category.IEncryptionObfuscator):
                     else:
                         func = ('Landroid/content/res/Resources;', 'decryptStringResources')
                     lines[index] = lines[index].replace('invoke-virtual', 'invoke-static').replace(callee, 'Lpi/DecryptString;->%s(%sI)Ljava/lang/String;' % (func[1], func[0]))
-                    
+
                 # After each string array resource is loaded, decrypt it (the string
                 # array resource will be encrypted directly in the xml file).
                 for string_array_number, index in enumerate(

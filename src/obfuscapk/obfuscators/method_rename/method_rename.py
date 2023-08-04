@@ -7,6 +7,7 @@ from obfuscapk import obfuscator_category
 from obfuscapk import util
 from obfuscapk.obfuscation import Obfuscation
 
+import functools
 
 class MethodRename(obfuscator_category.IRenameObfuscator):
     def __init__(self):
@@ -17,6 +18,7 @@ class MethodRename(obfuscator_category.IRenameObfuscator):
 
         self.ignore_package_names = []
 
+    @functools.lru_cache()
     def rename_method(self, method_name: str) -> str:
         method_md5 = util.get_string_md5(method_name)
         return "m{0}".format(method_md5.lower()[:8])

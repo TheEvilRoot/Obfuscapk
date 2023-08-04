@@ -32,7 +32,8 @@ class_pattern = re.compile(r"\.class.+?(?P<class_name>\S+?;)", re.UNICODE)
 super_class_pattern = re.compile(r"\.super\s(?P<class_name>\S+?;)", re.UNICODE)
 
 # .locals <number>
-locals_pattern = re.compile(r"\s+\.locals\s(?P<local_count>\d+)")
+locals_pattern = re.compile(r"\s+\.(?:locals|registers)\s(?P<local_count>\d+)")
+registers_pattern = re.compile(r"\s+\.(?P<type>locals|registers)\s(?P<local_count>\d+)")
 
 # .field <other_optional_stuff> <field_name>:<field_type> <optional_initialization>
 field_pattern = re.compile(

@@ -11,6 +11,7 @@ from obfuscapk import obfuscator_category
 from obfuscapk import util
 from obfuscapk.obfuscation import Obfuscation
 
+import functools
 
 class ClassRename(obfuscator_category.IRenameObfuscator):
     def __init__(self):
@@ -34,6 +35,7 @@ class ClassRename(obfuscator_category.IRenameObfuscator):
         # Will be populated before running the class rename obfuscator.
         self.class_name_to_smali_file: dict = {}
 
+    @functools.lru_cache(maxsize=4096)
     def encrypt_identifier(self, identifier: str) -> str:
         identifier_md5 = util.get_string_md5(identifier)
         ret = "p{0}".format(identifier_md5.lower()[:8])
@@ -64,10 +66,6 @@ class ClassRename(obfuscator_category.IRenameObfuscator):
 
         # Rename package name in manifest file.
         manifest_xml_root.set("package", self.encrypted_package_name)
-        manifest_xml_root.set(
-            "{http://schemas.android.com/apk/res/android}sharedUserId",
-            "{0}.uid.shared".format(util.get_random_string(16)),
-        )
 
     def rename_class_declarations(
         self, smali_files: List[str], interactive: bool = False

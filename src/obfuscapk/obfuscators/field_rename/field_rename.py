@@ -7,6 +7,7 @@ from obfuscapk import obfuscator_category
 from obfuscapk import util
 from obfuscapk.obfuscation import Obfuscation
 
+import functools
 
 class FieldRename(obfuscator_category.IRenameObfuscator):
     def __init__(self):
@@ -22,10 +23,10 @@ class FieldRename(obfuscator_category.IRenameObfuscator):
         self.max_fields_to_add = 0
         self.added_fields = 0
 
+    @functools.lru_cache(maxsize=4096)
     def rename_field(self, field_name: str) -> str:
         field_md5 = util.get_string_md5(field_name)
         rrr =  "f{0}".format(field_md5.lower()[:8])
-        self.logger.warn('RENAME_FIELD %s => %s', field_name, rrr)
         return rrr
 
     def get_sdk_class_names(self, smali_files: List[str]) -> Set[str]:
